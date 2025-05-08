@@ -53,8 +53,3 @@ Komutunu yazıp, az önce aldığımız paket adını giriyoruz. Script otomatik
 - Termux (Android 7.0+)
 - Root erişimi gereklidir
 
----
-
-## Lisans
-
-Bu proje [MIT Lisansı](LICENSE) ile lisanslanmıştır.
