@@ -13,4 +13,6 @@ fi
 cp ./fd "$TARGET"
 chmod +x "$TARGET"
 
+pkg install wget curl jq
+
 echo "'fd' komutu başarıyla yüklendi. Artık doğrudan 'fd' yazabilirsin."
