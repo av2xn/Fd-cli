@@ -11,7 +11,7 @@
 Termux'u açın ve aşağıdaki komutu yazın:
 
 ```bash
-pkg install git -y && git clone https://github.com/av2xn/Fd-cli && cd Fd-cli && bash setup.sh
+pkg install git -y && git clone https://github.com/av2xn/Fd-cli && cd Fd-cli && bash setup.sh && cd ..
 ```
 
 ---
