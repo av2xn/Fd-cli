@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-FD_INDEX="/data/adb/modules/fd-shell/fdroid-index.json"
+FD_INDEX="fdroid-index.json"
 FD_URL="https://f-droid.org/repo/index-v1.json"
 
 case "$1" in
@@ -37,16 +37,23 @@ case "$1" in
     URL="https://f-droid.org/repo/$apkname"
     echo
     echo "[*] APK indiriliyor..."
-    wget -q --show-progress "$URL" -O "/data/local/tmp/$apkname"
+    wget -q --show-progress "$URL" -O "$apkname"
 
-    if [[ ! -f "/data/local/tmp/$apkname" || ! -s "/data/local/tmp/$apkname" ]]; then
+    if [[ ! -f "$apkname" || ! -s "$apkname" ]]; then
       echo "[!] İndirme başarısız veya dosya boş."
       exit 1
     fi
 
     clear
     echo "[*] Uygulama yükleniyor..."
-    pm install -r "/data/local/tmp/$apkname" && echo "[✓] Kurulum başarılı!" && rm "/data/local/tmp/$apkname"
+    su -c "pm install -r $PWD/$apkname"
+
+    if [[ $? -eq 0 ]]; then
+      echo "[✓] Yükleme başarılı!"
+      rm "$apkname"
+    else
+      echo "[!] Yükleme başarısız."
+    fi
     ;;
 
   u|update)
@@ -57,12 +64,7 @@ case "$1" in
   *)
     echo "Kullanım:"
     echo "  fd s        → Uygulama arama"
-    echo "  fd i        → APK yükle (örn: org.app_123.apk)"
+    echo "  fd i        → APK yükle (örnek: org.app_123.apk)"
     echo "  fd u        → Veritabanını güncelle"
     ;;
 esac
-c
-elle"
-    ;;
-esac
-c
