@@ -14,8 +14,6 @@ Termux'u açın ve aşağıdaki komutu yazın:
 pkg install git -y && git clone https://github.com/av2xn/Fd-cli && cd Fd-cli && bash setup.sh
 ```
 
-Gerekenler otomatik olarak kurulacak ve script kalıntıları temizlenecektir.
-
 ---
 
 ## Kullanım
