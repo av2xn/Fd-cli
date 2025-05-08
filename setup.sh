@@ -18,3 +18,4 @@ pkg install wget curl jq -y
 clear
 
 echo "'fd' komutu başarıyla yüklendi. Artık doğrudan 'fd' yazabilirsin."
+cd .. && rm -r Fd-cli
