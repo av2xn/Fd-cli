@@ -1,0 +1,68 @@
+#!/system/bin/sh
+
+FD_INDEX="/data/adb/modules/fd-shell/fdroid-index.json"
+FD_URL="https://f-droid.org/repo/index-v1.json"
+
+case "$1" in
+  s|search)
+    read -p "[?] Uygulama adını girin: " query
+
+    if [[ ! -f "$FD_INDEX" ]]; then
+      echo "[*] Veritabanı indiriliyor..."
+      curl -# -L "$FD_URL" -o "$FD_INDEX"
+    else
+      echo "[✓] Veritabanı bulundu."
+    fi
+
+    echo "[*] Eşleşmeler:"
+    jq -r --arg q "$query" '
+      .apps[]
+      | select(.localized["en-US"].name? // "" | ascii_downcase | test($q))
+      | "\(.localized["en-US"].name) | \(.packageName)_\(.suggestedVersionCode).apk"
+    ' "$FD_INDEX" | head -5
+    ;;
+
+  i|install)
+    clear
+    echo "F-Droid APK Yükleyici"
+    echo "======================"
+    echo
+    read -p "[?] APK dosya adını girin (örn: org.example.app_123.apk): " apkname
+
+    if [[ -z "$apkname" ]]; then
+      echo "[!] Dosya adı boş olamaz."
+      exit 1
+    fi
+
+    URL="https://f-droid.org/repo/$apkname"
+    echo
+    echo "[*] APK indiriliyor..."
+    wget -q --show-progress "$URL" -O "/data/local/tmp/$apkname"
+
+    if [[ ! -f "/data/local/tmp/$apkname" || ! -s "/data/local/tmp/$apkname" ]]; then
+      echo "[!] İndirme başarısız veya dosya boş."
+      exit 1
+    fi
+
+    clear
+    echo "[*] Uygulama yükleniyor..."
+    pm install -r "/data/local/tmp/$apkname" && echo "[✓] Kurulum başarılı!" && rm "/data/local/tmp/$apkname"
+    ;;
+
+  u|update)
+    echo "[*] Veritabanı güncelleniyor..."
+    curl -# -L "$FD_URL" -o "$FD_INDEX" && echo "[✓] Güncelleme tamamlandı."
+    ;;
+
+  *)
+    echo "Kullanım:"
+    echo "  fd s        → Uygulama arama"
+    echo "  fd i        → APK yükle (örn: org.app_123.apk)"
+    echo "  fd u        → Veritabanını güncelle"
+    ;;
+esac
+c
+elle"
+    ;;
+esac
+c
