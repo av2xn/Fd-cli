@@ -1,4 +1,4 @@
-#!/system/bin/sh
+#!/data/data/com.termux/files/usr/bin/bash
 
 FD_INDEX="/data/adb/modules/fd-shell/fdroid-index.json"
 FD_URL="https://f-droid.org/repo/index-v1.json"
