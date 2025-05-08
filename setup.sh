@@ -13,7 +13,7 @@ fi
 cp ./fd "$TARGET"
 chmod +x "$TARGET"
 
-pkg install wget curl jq
+pkg install wget curl jq -y
 
 clear
 
