@@ -5,7 +5,7 @@ index_file="fdroid-index.json"
 
 function update_index() {
     echo "[*] F-Droid veritabanı indiriliyor..."
-    curl -s -L -o $index_file "$fdroid_url/index-v1.json"
+    curl -s -L -o "$index_file" "$fdroid_url/index-v1.json"
 }
 
 function search_apps() {
@@ -20,33 +20,41 @@ function search_apps() {
 }
 
 function install_app() {
-    read -p "[?] Paket adını girin (örnek: org.mozilla.fennec_fdroid_123.apk): " apkname
+    read -p "[?] Paket adı + versiyon girin (örnek: org.mozilla.fennec_fdroid_123.apk): " apkname
 
     if [[ ! "$apkname" =~ \.apk$ ]]; then
-        echo "[!] Geçerli bir .apk adı girin."
+        echo "[!] Geçerli bir .apk adı girilmedi."
         return
     fi
 
     echo "[*] APK indiriliyor: $apkname"
     curl -s -L -o "$apkname" "$fdroid_url/$apkname"
 
-    echo -e "\n[?] Uygulama nasıl yüklensin?"
-    echo "1 - root (pm install)"
-    echo "2 - shizuku (rish)"
-    read -p "> " choice
-
-    if [[ "$choice" == "1" ]]; then
-        echo "[*] Root ile yükleniyor..."
-        su -c "pm install -r $PWD/$apkname" && echo "[✓] Yüklendi!" || echo "[!] Hata!"
-    elif [[ "$choice" == "2" ]]; then
-        echo "[*] Shizuku ile yükleniyor..."
-        ./rish pm install -r $PWD/$apkname && echo "[✓] Yüklendi!" || echo "[!] Hata!"
-    else
-        echo "[!] Geçersiz seçim!"
+    if [[ ! -s "$apkname" ]]; then
+        echo "[!] İndirme başarısız veya dosya boş."
+        rm -f "$apkname"
         return
     fi
 
-    rm -f "$apkname"
+    echo -e "\n[?] Uygulama nasıl yüklensin?"
+    echo "1 - root (pm install)"
+    echo "2 - GUI yükleyici (apk installer ekranı açılır)"
+    read -p "> " method
+
+    if [[ "$method" == "1" ]]; then
+        echo "[*] Root ile yükleniyor..."
+        su -c "pm install -r $PWD/$apkname" && echo "[✓] Yüklendi!" || echo "[!] Yükleme başarısız."
+    elif [[ "$method" == "2" ]]; then
+        echo "[*] GUI yükleyici açılıyor..."
+        termux-open "$PWD/$apkname"
+        echo "[✓] Lütfen yükleme ekranında onay verin."
+    else
+        echo "[!] Geçersiz seçim. Kurulum iptal."
+        rm -f "$apkname"
+        return
+    fi
+
+    # rm -f "$apkname" # Not: GUI yükleyicide yüklenmeden silme riskli olabilir
 }
 
 function usage() {
