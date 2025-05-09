@@ -46,7 +46,7 @@ function install_app() {
         su -c "pm install -r $PWD/$apkname" && echo "[✓] Yüklendi!" || echo "[!] Yükleme başarısız."
     elif [[ "$method" == "2" ]]; then
         echo "[*] GUI yükleyici açılıyor..."
-        termux-open "$PWD/$apkname"
+        termux-open --content-type application/vnd.android.package-archive "$PWD/$apkname"
         echo "[✓] Lütfen yükleme ekranında onay verin."
     else
         echo "[!] Geçersiz seçim. Kurulum iptal."
