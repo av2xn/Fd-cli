@@ -1,84 +1,64 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-fd_index="fdroid-index.json"
-fd_url="https://f-droid.org/repo/index-v1.json"
+fdroid_url="https://f-droid.org/repo"
+index_file="fdroid-index.json"
 
-update_index() {
-  echo "[*] Veritabanı indiriliyor..."
-  curl -# -L -o "$fd_index" "$fd_url"
+function update_index() {
+    echo "[*] F-Droid veritabanı indiriliyor..."
+    curl -s -L -o $index_file "$fdroid_url/index-v1.json"
 }
 
-search_app() {
-  if [ ! -f "$fd_index" ]; then
-    update_index
-  fi
-  read -p "[?] Uygulama adını girin: " query
-  echo "[*] Eşleşmeler aranıyor..."
-
-  jq -r --arg q "$query" '
-    .apps[]
-    | select((.localized["en-US"].name // .packageName) | test($q; "i"))
-    | "\(.localized["en-US"].name // "Bilinmeyen") | \(.packageName)_\(.suggestedVersionCode).apk"
-  ' "$fd_index" | head -10
+function search_apps() {
+    [[ ! -f "$index_file" ]] && update_index
+    read -p "[?] Uygulama adını girin: " query
+    echo "[*] Eşleşmeler bulunuyor..."
+    jq -r --arg q "$query" '
+      .apps[]
+      | select(.packageName | test($q;"i"))
+      | "\(.localized["en-US"].name // "İsim yok") | \(.packageName)_\(.suggestedVersionCode).apk"
+    ' "$index_file" | head -n 5
 }
 
-install_app() {
-  read -p "[?] Paket adını girin (örnek: org.mozilla.fennec_fdroid): " pkg
-  if [ ! -f "$fd_index" ]; then
-    update_index
-  fi
+function install_app() {
+    read -p "[?] Paket adını girin (örnek: org.mozilla.fennec_fdroid_123.apk): " apkname
 
-  version=$(jq -r --arg p "$pkg" '
-    .apps[] | select(.packageName == $p) | .suggestedVersionCode
-  ' "$fd_index")
+    if [[ ! "$apkname" =~ \.apk$ ]]; then
+        echo "[!] Geçerli bir .apk adı girin."
+        return
+    fi
 
-  if [[ -z "$version" || "$version" == "null" ]]; then
-    echo "[!] Sürüm bulunamadı!"
-    exit 1
-  fi
+    echo "[*] APK indiriliyor: $apkname"
+    curl -s -L -o "$apkname" "$fdroid_url/$apkname"
 
-  file="${pkg}_${version}.apk"
-  url="https://f-droid.org/repo/$file"
+    echo -e "\n[?] Uygulama nasıl yüklensin?"
+    echo "1 - root (pm install)"
+    echo "2 - shizuku (rish)"
+    read -p "> " choice
 
-  echo "[*] APK indiriliyor: $file"
-  curl -L -o "$file" "$url"
+    if [[ "$choice" == "1" ]]; then
+        echo "[*] Root ile yükleniyor..."
+        su -c "pm install -r $PWD/$apkname" && echo "[✓] Yüklendi!" || echo "[!] Hata!"
+    elif [[ "$choice" == "2" ]]; then
+        echo "[*] Shizuku ile yükleniyor..."
+        ./rish pm install -r $PWD/$apkname && echo "[✓] Yüklendi!" || echo "[!] Hata!"
+    else
+        echo "[!] Geçersiz seçim!"
+        return
+    fi
 
-  if [[ ! -s "$file" ]]; then
-    echo "[!] Dosya indirilemedi veya boş."
-    rm -f "$file"
-    exit 1
-  fi
+    rm -f "$apkname"
+}
 
-  echo
-  echo "[?] Uygulama nasıl yüklensin?"
-  echo "1) Root (Magisk)"
-  echo "2) Shizuku (rish)"
-  read -p "Seçiminiz (1/2): " method
-
-  if [[ "$method" == "1" ]]; then
-    echo "[*] Root ile kurulum yapılıyor..."
-    su -c "pm install -r $PWD/$file"
-  elif [[ "$method" == "2" ]]; then
-    echo "[*] Shizuku ile kurulum yapılıyor..."
-    ./rish pm install -r "$PWD/$file"
-  else
-    echo "[!] Geçersiz seçim. Kurulum iptal edildi."
-    rm -f "$file"
-    exit 1
-  fi
-
-  echo "[✓] Kurulum tamamlandı."
-  rm -f "$file"
+function usage() {
+    echo "Kullanım: fd <s|i|u>"
+    echo "  s  – Uygulama ara"
+    echo "  i  – Uygulama yükle (.apk adı girerek)"
+    echo "  u  – Veritabanını güncelle"
 }
 
 case "$1" in
-  s) search_app ;;
-  i) install_app ;;
-  u) update_index ;;
-  *)
-    echo "Kullanım: fd <s|i|u>"
-    echo "  s  → Uygulama ara"
-    echo "  i  → Uygulama yükle"
-    echo "  u  → Veritabanını güncelle"
-    ;;
+    s) search_apps ;;
+    i) install_app ;;
+    u) update_index ;;
+    *) usage ;;
 esac
