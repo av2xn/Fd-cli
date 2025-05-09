@@ -1,70 +1,84 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
-FD_INDEX="fdroid-index.json"
-FD_URL="https://f-droid.org/repo/index-v1.json"
+fd_index="fdroid-index.json"
+fd_url="https://f-droid.org/repo/index-v1.json"
+
+update_index() {
+  echo "[*] Veritabanı indiriliyor..."
+  curl -# -L -o "$fd_index" "$fd_url"
+}
+
+search_app() {
+  if [ ! -f "$fd_index" ]; then
+    update_index
+  fi
+  read -p "[?] Uygulama adını girin: " query
+  echo "[*] Eşleşmeler aranıyor..."
+
+  jq -r --arg q "$query" '
+    .apps[]
+    | select((.localized["en-US"].name // .packageName) | test($q; "i"))
+    | "\(.localized["en-US"].name // "Bilinmeyen") | \(.packageName)_\(.suggestedVersionCode).apk"
+  ' "$fd_index" | head -10
+}
+
+install_app() {
+  read -p "[?] Paket adını girin (örnek: org.mozilla.fennec_fdroid): " pkg
+  if [ ! -f "$fd_index" ]; then
+    update_index
+  fi
+
+  version=$(jq -r --arg p "$pkg" '
+    .apps[] | select(.packageName == $p) | .suggestedVersionCode
+  ' "$fd_index")
+
+  if [[ -z "$version" || "$version" == "null" ]]; then
+    echo "[!] Sürüm bulunamadı!"
+    exit 1
+  fi
+
+  file="${pkg}_${version}.apk"
+  url="https://f-droid.org/repo/$file"
+
+  echo "[*] APK indiriliyor: $file"
+  curl -L -o "$file" "$url"
+
+  if [[ ! -s "$file" ]]; then
+    echo "[!] Dosya indirilemedi veya boş."
+    rm -f "$file"
+    exit 1
+  fi
+
+  echo
+  echo "[?] Uygulama nasıl yüklensin?"
+  echo "1) Root (Magisk)"
+  echo "2) Shizuku (rish)"
+  read -p "Seçiminiz (1/2): " method
+
+  if [[ "$method" == "1" ]]; then
+    echo "[*] Root ile kurulum yapılıyor..."
+    su -c "pm install -r $PWD/$file"
+  elif [[ "$method" == "2" ]]; then
+    echo "[*] Shizuku ile kurulum yapılıyor..."
+    ./rish pm install -r "$PWD/$file"
+  else
+    echo "[!] Geçersiz seçim. Kurulum iptal edildi."
+    rm -f "$file"
+    exit 1
+  fi
+
+  echo "[✓] Kurulum tamamlandı."
+  rm -f "$file"
+}
 
 case "$1" in
-  s|search)
-    read -p "[?] Uygulama adını girin: " query
-
-    if [[ ! -f "$FD_INDEX" ]]; then
-      echo "[*] Veritabanı indiriliyor..."
-      curl -# -L "$FD_URL" -o "$FD_INDEX"
-    else
-      echo "[✓] Veritabanı bulundu."
-    fi
-
-    echo "[*] Eşleşmeler:"
-    jq -r --arg q "$query" '
-      .apps[]
-      | select(.localized["en-US"].name? // "" | ascii_downcase | test($q))
-      | "\(.localized["en-US"].name) | \(.packageName)_\(.suggestedVersionCode).apk"
-    ' "$FD_INDEX" | head -5
-    ;;
-
-  i|install)
-    clear
-    echo "F-Droid APK Yükleyici"
-    echo "======================"
-    echo
-    read -p "[?] APK dosya adını girin (örn: org.example.app_123.apk): " apkname
-
-    if [[ -z "$apkname" ]]; then
-      echo "[!] Dosya adı boş olamaz."
-      exit 1
-    fi
-
-    URL="https://f-droid.org/repo/$apkname"
-    echo
-    echo "[*] APK indiriliyor..."
-    wget -q --show-progress "$URL" -O "$apkname"
-
-    if [[ ! -f "$apkname" || ! -s "$apkname" ]]; then
-      echo "[!] İndirme başarısız veya dosya boş."
-      exit 1
-    fi
-
-    clear
-    echo "[*] Uygulama yükleniyor..."
-    su -c "pm install -r $PWD/$apkname"
-
-    if [[ $? -eq 0 ]]; then
-      echo "[✓] Yükleme başarılı!"
-      rm "$apkname"
-    else
-      echo "[!] Yükleme başarısız."
-    fi
-    ;;
-
-  u|update)
-    echo "[*] Veritabanı güncelleniyor..."
-    curl -# -L "$FD_URL" -o "$FD_INDEX" && echo "[✓] Güncelleme tamamlandı."
-    ;;
-
+  s) search_app ;;
+  i) install_app ;;
+  u) update_index ;;
   *)
-    echo "Kullanım:"
-    echo "  fd s        → Uygulama arama"
-    echo "  fd i        → APK yükle (örnek: org.app_123.apk)"
-    echo "  fd u        → Veritabanını güncelle"
+    echo "Kullanım: fd <s|i|u>"
+    echo "  s  → Uygulama ara"
+    echo "  i  → Uygulama yükle"
+    echo "  u  → Veritabanını güncelle"
     ;;
 esac
